@@ -1,0 +1,75 @@
+---
+title: "HW6"
+author: "Chu YU"
+date: "2018/11/22"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Problem 1
+
+(1)The Washington Post has gathered data on homicides in 50 large U.S. cities and we will use it as our dataset.
+```{r}
+## import the data
+homicide_df = read.csv("./data/homicide-data.csv") %>%
+  mutate(city_state = str_c(city,",", state),
+         solving_status = 
+           ifelse(disposition %in% c("Closed without arrest", "Open/No arrest"), 0, 1)) %>%
+  filter(!(city_state %in% c("Dallas,TX","Phoenix,AZ","Kansas City,MO","Tulsa,AL"))) %>%
+  mutate(victim_race = ifelse(victim_race == "White", "white", "non-white"),
+         victim_race = factor(victim_race, levels = c("white", "non-white")),
+         victim_age = as.numeric(victim_age))
+
+str(homicide_df)
+  
+```
+
+(2)linear regression model For the city of Baltimore, MD
+```{r}
+homicide_fit_logistic = homicide_df %>%
+  filter(city_state == "Baltimore,MD") %>%
+  glm(solving_status ~ victim_age + victim_race + victim_sex, family = binomial(), data = .)
+ 
+homi_or = homicide_fit_logistic%>% 
+  broom::tidy() %>% 
+  mutate(OR = exp(estimate)) %>%
+  select(term, OR)
+
+homi_confidt = homicide_fit_logistic%>% 
+  broom::confint_tidy() %>% 
+    mutate(conf.low = exp(conf.low),
+           conf.high = exp(conf.high))
+
+cbind(homi_or, homi_confidt) %>% 
+  knitr::kable(digits = 3)
+```
+
+
+(3) for each of the cities
+```{r}
+or_confidt = function(homicide_data){
+    fit_logistic = glm(solvingstatus ~ victim_age + victim_sex + victim_race, data = homicide_data, family = binomial())
+    
+    oddsr = fit_logistic %>% 
+    broom::tidy() %>% 
+    mutate(or = exp(estimate)) %>%
+    select(term, or)
+    
+    confidt = fit_logistic %>% 
+    broom::confint_tidy() %>% 
+    mutate(conf.low = exp(conf.low),
+           conf.high = exp(conf.high))
+    
+    output = cbind(oddsr, confidt) %>% 
+      filter(term == "victim_racenon-white") %>% select(-term)
+    
+    output
+}
+
+
+```
+
