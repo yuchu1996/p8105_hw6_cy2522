@@ -49,7 +49,7 @@ cbind(homi_or, homi_confidt) %>%
 ```
 
 
-(3) for each of the cities
+(3)For each of the cities
 ```{r}
 or_confidt = function(homicide_data){
     fit_logistic = glm(solvingstatus ~ victim_age + victim_sex + victim_race, data = homicide_data, family = binomial())
