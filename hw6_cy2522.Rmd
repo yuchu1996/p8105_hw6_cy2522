@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
 library(modelr)
 library(leaps)
+
 ```
 
 ## Problem 1
@@ -52,7 +53,7 @@ cbind(homi_or, homi_confidt) %>%
 ```
 
 
-(3)For each of the cities
+   (3)For each of the cities
 ```{r}
 or_confidt = function(homicide_data){
     fit_logistic = glm(solving_status ~ victim_age + victim_sex + victim_race, data = homicide_data, family = binomial())
@@ -82,7 +83,7 @@ homicide_cities = homicide_df %>%
   
 ```
 
-(4) Create a plot that shows the estimated ORs and CIs for each city. 
+  (4) Create a plot that shows the estimated ORs and CIs for each city. 
 ```{r}
 homicide_cities %>%
   ggplot(aes(y = or,x = reorder(city_state, or))) + 
@@ -110,7 +111,7 @@ sum(is.na(birthweight))
 
 ```
 
-(1)Propose a regression model for birthweight.
+  (1)Propose a regression model for birthweight.
 ```{r}
 ##using stepwise to  
 mult.fit = lm(bwt ~ ., data = birthweight)
@@ -143,7 +144,7 @@ bwt_pre_res %>%
     )
 ```
 
-(3) Compare your model to two others
+  (3) Compare your model to two others
 ```{r}
 ## using cv to compare three different lm models
 cv_df =
