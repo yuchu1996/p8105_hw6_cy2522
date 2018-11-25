@@ -6,7 +6,7 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
 ```
 
@@ -31,15 +31,16 @@ str(homicide_df)
 (2)linear regression model For the city of Baltimore, MD
 ```{r}
 homicide_fit_logistic = homicide_df %>%
-  filter(city_state == "Baltimore,MD") %>%
-  glm(solving_status ~ victim_age + victim_race + victim_sex, family = binomial(), data = .)
+  filter(city_state == "Baltimore,MD") %>% 
+  glm(solving_status ~ victim_age + victim_race + victim_sex, 
+      family = binomial(), data = .)
  
-homi_or = homicide_fit_logistic%>% 
+homi_or = homicide_fit_logistic %>% 
   broom::tidy() %>% 
   mutate(OR = exp(estimate)) %>%
   select(term, OR)
 
-homi_confidt = homicide_fit_logistic%>% 
+homi_confidt = homicide_fit_logistic %>% 
   broom::confint_tidy() %>% 
     mutate(conf.low = exp(conf.low),
            conf.high = exp(conf.high))
@@ -52,7 +53,7 @@ cbind(homi_or, homi_confidt) %>%
 (3)For each of the cities
 ```{r}
 or_confidt = function(homicide_data){
-    fit_logistic = glm(solvingstatus ~ victim_age + victim_sex + victim_race, data = homicide_data, family = binomial())
+    fit_logistic = glm(solving_status ~ victim_age + victim_sex + victim_race, data = homicide_data, family = binomial())
     
     oddsr = fit_logistic %>% 
     broom::tidy() %>% 
@@ -67,9 +68,29 @@ or_confidt = function(homicide_data){
     output = cbind(oddsr, confidt) %>% 
       filter(term == "victim_racenon-white") %>% select(-term)
     
-    output
-}
+    output}
 
+library(modelr)
 
+homicide_cities = homicide_df %>%
+  group_by(city_state) %>%
+  nest() %>%
+  mutate(estimation = map(data, or_confidt)) %>%
+  select(city_state, estimation) %>% unnest() 
+  
+```
+
+(4) Create a plot that shows the estimated ORs and CIs for each city. 
+```{r}
+homicide_cities %>%
+  ggplot(aes(y = or,x = reorder(city_state, or))) + 
+  geom_point() +
+  geom_errorbar(aes(x = city_state, ymin = conf.low, ymax = conf.high)) +
+  labs(
+    title = "scatterplot of ORs and CIs for each city",
+    x = "city and state name",
+    y = "Solving status "
+  ) +
+   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
