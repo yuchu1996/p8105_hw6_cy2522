@@ -8,6 +8,8 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
+library(modelr)
+library(leaps)
 ```
 
 ## Problem 1
@@ -70,7 +72,7 @@ or_confidt = function(homicide_data){
     
     output}
 
-library(modelr)
+
 
 homicide_cities = homicide_df %>%
   group_by(city_state) %>%
@@ -94,3 +96,76 @@ homicide_cities %>%
    theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
+## problem 2
+```{r}
+## import the data and clean it
+birthweight = read.csv("./data/birthweight.csv") %>%
+  mutate(babysex = as.factor(babysex), 
+         frace = as.factor(frace), 
+         malform = as.factor(malform),
+         mrace = as.factor(mrace))
+
+## check for the missing values
+sum(is.na(birthweight))
+
+```
+
+(1)Propose a regression model for birthweight.
+```{r}
+##using stepwise to  
+mult.fit = lm(bwt ~ ., data = birthweight)
+step(mult.fit, direction = 'backward')
+```
+
+By using the "stepwise regression", I finally choose "bhead", "blength", "mrace", "parity" as the predictors.
+
+```{r}
+bwt_fit = lm(bwt ~ bhead + blength + mrace + parity, data = birthweight)
+
+summary(bwt_fit)
+```
+
+We then get the bwt_fit model: bwt ~ bhead + blength + mrace + parity. And from the further analysis of it, we can get adjustedd R-squared 0.6962.
+
+```{r}
+bwt_pre_res = birthweight %>% 
+    add_predictions(model = bwt_fit, var = "pred") %>% 
+    add_residuals(model = bwt_fit, var = "resid")
+
+bwt_pre_res %>% 
+    ggplot(aes(x = pred, y = resid)) +
+    geom_point(alpha = 0.4) +
+    geom_smooth() +
+    labs(
+        y = "Residuals",
+        x = "Predictions",
+        title = "plot of model residuals against fitted values"
+    )
+```
+
+(3) Compare your model to two others
+```{r}
+## using cv to compare three different lm models
+cv_df =
+  crossv_mc(birthweight, 100) %>% 
+  mutate(train = map(train, as_tibble),
+         test = map(test, as_tibble)) %>%
+  mutate(bwt_myfit1 = map(train, ~lm(bwt ~ bhead + blength + mrace + parity, data = .x)),
+         bwt_fit_compare1 = map(train, ~lm(bwt ~ gaweeks + blength , data = .x)),
+         bwt_fit_compare2 = map(train, ~lm(bwt ~ bhead + blength + babysex +babysex * blength + babysex * bhead + bhead * babysex + bhead * babysex * blength, data = .x))) %>% 
+  mutate(rmse_lin    = map2_dbl(bwt_myfit1, test, ~rmse(model = .x, data = .y)),
+         rmse_pwl = map2_dbl(bwt_fit_compare1, test, ~rmse(model = .x, data = .y)),
+         rmse_nonlin = map2_dbl(bwt_fit_compare2, test, ~rmse(model = .x, data = .y)))
+```
+
+ a plot for comoparing
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+ 
+ 
